@@ -1,7 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Express 2012 for Windows Phone
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OwnCloud", "OwnCloud\OwnCloud.csproj", "{94974BF1-3670-4363-BE9B-D5AED90BF10F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OwnCloud.WebDAV", "OwnCloud.WebDAV\OwnCloud.WebDAV.csproj", "{8D0BE294-0984-4276-A843-3A3FFCF48998}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{89D0A876-090A-48DB-BF0D-303BB31F6ECD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OwnCloud.WebDAV.Tests", "OwnCloud.WebDAV.Tests\OwnCloud.WebDAV.Tests.csproj", "{A0D9D5A4-CEB7-4F21-98EF-5D559B91F482}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OwnCloud.Tests", "OwnCloud.Tests\OwnCloud.Tests.csproj", "{F519EDD0-D627-4AC1-BD58-98D91C5F0FD0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,8 +23,26 @@ Global
 		{94974BF1-3670-4363-BE9B-D5AED90BF10F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{94974BF1-3670-4363-BE9B-D5AED90BF10F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{94974BF1-3670-4363-BE9B-D5AED90BF10F}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{8D0BE294-0984-4276-A843-3A3FFCF48998}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D0BE294-0984-4276-A843-3A3FFCF48998}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D0BE294-0984-4276-A843-3A3FFCF48998}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D0BE294-0984-4276-A843-3A3FFCF48998}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A0D9D5A4-CEB7-4F21-98EF-5D559B91F482}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0D9D5A4-CEB7-4F21-98EF-5D559B91F482}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0D9D5A4-CEB7-4F21-98EF-5D559B91F482}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A0D9D5A4-CEB7-4F21-98EF-5D559B91F482}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F519EDD0-D627-4AC1-BD58-98D91C5F0FD0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F519EDD0-D627-4AC1-BD58-98D91C5F0FD0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F519EDD0-D627-4AC1-BD58-98D91C5F0FD0}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{F519EDD0-D627-4AC1-BD58-98D91C5F0FD0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F519EDD0-D627-4AC1-BD58-98D91C5F0FD0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F519EDD0-D627-4AC1-BD58-98D91C5F0FD0}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A0D9D5A4-CEB7-4F21-98EF-5D559B91F482} = {89D0A876-090A-48DB-BF0D-303BB31F6ECD}
+		{F519EDD0-D627-4AC1-BD58-98D91C5F0FD0} = {89D0A876-090A-48DB-BF0D-303BB31F6ECD}
 	EndGlobalSection
 EndGlobal

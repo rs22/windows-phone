@@ -9,9 +9,10 @@ using System.Windows.Media;
 using Microsoft.Phone.Controls;
 using Microsoft.Phone.Shell;
 using OwnCloud.Data;
-using OwnCloud.Data.DAV;
 using OwnCloud.View.Controls;
 using OwnCloud.Extensions;
+using OwnCloud.WebDAV;
+using System.Threading.Tasks;
 
 namespace OwnCloud.View.Page
 {
@@ -70,7 +71,7 @@ namespace OwnCloud.View.Page
             FetchStructure(_workingPath);
         }
 
-        private DAVRequestResult.Item _item;
+        private WebDAVFile _item;
 
         /// <summary>
         /// Tries to fetch a given path and refreshes the views.
@@ -144,16 +145,12 @@ namespace OwnCloud.View.Page
             // start overlay
         }
 
-        private void StartRequest()
+        private async Task StartRequest()
         {
-            var dav = new WebDAV(_workingAccount.GetUri(), _workingAccount.GetCredentials());
-            dav.StartRequest(DAVRequestHeader.CreateListing(_workingPath), DAVRequestBody.CreateAllPropertiesListing(), null, FetchStructureComplete);
-        }
-
-        private void FetchStructureComplete(DAVRequestResult result, object userObj)
-        {
-            if (result.Status == ServerStatus.MultiStatus && !result.Request.ErrorOccured && result.Items.Count > 0)
-            {
+            var dav = new WebDAVClient(_workingAccount.GetUri(), _workingAccount.GetCredentials());
+            try {
+                var entries = await dav.GetEntries(_workingPath, true);
+                if (entries.Count == 0) throw new Exception("No entries found");
                 bool _firstItem = false;
                 // display all items linear
                 // we cannot wait till an item is displayed, instead for a fluid
@@ -161,59 +158,47 @@ namespace OwnCloud.View.Page
                 int delayStart = 0;
                 int delayStep = 50; // ms
 
-                foreach (DAVRequestResult.Item item in result.Items)
-                {
-                    File fileItem = new File()
-                    {
-                        FileName = item.LocalReference,
-                        FilePath = item.Reference,
-                        FileSize = item.ContentLength,
-                        FileType = item.ContentType,
-                        FileCreated = item.CreationDate,
+                foreach (var item in entries) {
+                    File fileItem = new File() {
+                        FileName = item.FileName,
+                        FilePath = item.FilePath.ToString(),
+                        FileSize = item.Size,
+                        FileType = item.MimeType,
+                        FileCreated = item.Created,
                         FileLastModified = item.LastModified,
-                        IsDirectory = item.ResourceType == ResourceType.Collection
+                        IsDirectory = item.IsDirectory
                     };
 
                     bool display = true;
 
-                    Dispatcher.BeginInvoke(() =>
-                    {
+                    Dispatcher.BeginInvoke(() => {
 
-                        switch (_views[_viewIndex])
-                        {
+                        switch (_views[_viewIndex]) {
                             case "detail":
-                                if (!_firstItem)
-                                {
+                                if (!_firstItem) {
                                     _firstItem = true;
 
                                     // Root
-                                    if (fileItem.IsDirectory)
-                                    {
-                                        if (item.Reference == _workingAccount.WebDAVPath)
-                                        {
+                                    if (fileItem.IsDirectory) {
+                                        if (item.FilePath.ToString() == _workingAccount.WebDAVPath) {
                                             // cannot go up further
                                             display = false;
-                                        }
-                                        else
-                                        {
+                                        } else {
                                             fileItem.IsRootItem = true;
                                             fileItem.FilePath = fileItem.FileParentPath;
                                         }
                                     }
                                 }
 
-                                if (display)
-                                {
-                                    FileDetailViewControl detailControl = new FileDetailViewControl()
-                                            {
-                                                DataContext = fileItem,
-                                                Opacity = 0,
-                                                Background = new SolidColorBrush() { Color = Colors.Transparent },
-                                            };
+                                if (display) {
+                                    FileDetailViewControl detailControl = new FileDetailViewControl() {
+                                        DataContext = fileItem,
+                                        Opacity = 0,
+                                        Background = new SolidColorBrush() { Color = Colors.Transparent },
+                                    };
 
                                     DetailList.Items.Add(detailControl);
-                                    detailControl.Delay(delayStart, () =>
-                                    {
+                                    detailControl.Delay(delayStart, () => {
                                         detailControl.FadeIn(100);
                                     });
                                     delayStart += delayStep;
@@ -221,30 +206,23 @@ namespace OwnCloud.View.Page
                                 break;
 
                             case "tile":
-                                if (!_firstItem)
-                                {
+                                if (!_firstItem) {
                                     _firstItem = true;
 
                                     // Root
-                                    if (fileItem.IsDirectory)
-                                    {
-                                        if (item.Reference == _workingAccount.WebDAVPath)
-                                        {
+                                    if (fileItem.IsDirectory) {
+                                        if (item.FilePath.ToString() == _workingAccount.WebDAVPath) {
                                             // cannot go up further
                                             display = false;
-                                        }
-                                        else
-                                        {
+                                        } else {
                                             fileItem.IsRootItem = true;
                                             fileItem.FilePath = fileItem.FileParentPath;
                                         }
                                     }
                                 }
 
-                                if (display)
-                                {
-                                    FileMultiTileViewControl multiControl = new FileMultiTileViewControl(_workingAccount, fileItem, true)
-                                    {
+                                if (display) {
+                                    FileMultiTileViewControl multiControl = new FileMultiTileViewControl(_workingAccount, fileItem, true) {
                                         Width = 200,
                                         Height = 200,
                                         Opacity = 0,
@@ -254,8 +232,7 @@ namespace OwnCloud.View.Page
 
                                     // sometimes the exception "wrong parameter" is thrown - but why???
                                     TileView.Children.Add(multiControl);
-                                    multiControl.Delay(delayStart, () =>
-                                    {
+                                    multiControl.Delay(delayStart, () => {
                                         multiControl.FadeIn(100);
                                     });
                                 }
@@ -265,22 +242,20 @@ namespace OwnCloud.View.Page
                     });
                 }
 
-                Dispatcher.BeginInvoke(() =>
-                {
+                Dispatcher.BeginInvoke(() => {
                     progress.IsVisible = false;
                 });
-            }
-            else
-            {
-                Dispatcher.BeginInvoke(() =>
-                {
+            } catch (Exception ex) {
+                Dispatcher.BeginInvoke(() => {
                     progress.IsVisible = false;
-                    if (result.Status == ServerStatus.Unauthorized)
-                    {
+                    var webException = ex as WebException;
+                    var webResponse = webException != null ? webException.Response as HttpWebResponse : null;
+                    if (webException != null && 
+                        webException.Status == WebExceptionStatus.ProtocolError &&
+                        webResponse != null &&
+                        webResponse.StatusCode == HttpStatusCode.Unauthorized) {
                         MessageBox.Show("FetchFile_Unauthorized".Translate(), "Error_Caption".Translate(), MessageBoxButton.OK);
-                    }
-                    else
-                    {
+                    } else {
                         MessageBox.Show("FetchFile_Unexpected_Result".Translate(), "Error_Caption".Translate(), MessageBoxButton.OK);
                     }
                 });

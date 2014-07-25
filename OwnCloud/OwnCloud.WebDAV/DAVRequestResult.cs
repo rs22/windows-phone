@@ -5,12 +5,9 @@ using System.Text;
 using System.IO;
 using System.Xml;
 using System.Net;
-using System.Xml.Linq;
 
-namespace OwnCloud.Data.DAV
-{
-    class DAVRequestResult : IDisposable
-    {
+namespace OwnCloud.WebDAV {
+    internal class DAVRequestResult : IDisposable {
 
         MemoryStream _stream;
 
@@ -19,8 +16,7 @@ namespace OwnCloud.Data.DAV
         /// </summary>
         /// <param name="request"></param>
         /// <param name="status"></param>
-        public DAVRequestResult(WebDAV request, object status, string statusText)
-        {
+        internal DAVRequestResult(WebDAVClient request, object status, string statusText) {
             Status = (ServerStatus)Enum.Parse(typeof(ServerStatus), status.ToString(), false);
             StatusText = statusText;
             Request = request;
@@ -36,8 +32,7 @@ namespace OwnCloud.Data.DAV
         /// <param name="request"></param>
         /// <param name="response"></param>
         /// <param name="uri"></param>
-        public DAVRequestResult(WebDAV request, HttpWebResponse response, Uri uri)
-        {
+        internal DAVRequestResult(WebDAVClient request, HttpWebResponse response, Uri uri) {
             Request = request;
             Items = new List<Item>();
             Status = (ServerStatus)Enum.Parse(typeof(ServerStatus), response.StatusCode.ToString(), false);
@@ -60,7 +55,7 @@ namespace OwnCloud.Data.DAV
             // to jump over elements. Hence we stop at the element and
             // store the element name. Then wait for Text-Elements value
             // to capture.
-            using(XmlReader reader = XmlReader.Create(_stream, null)) {
+            using (XmlReader reader = XmlReader.Create(_stream, null)) {
 
                 Item item = new Item();
                 var waitForResourceType = false;
@@ -72,16 +67,12 @@ namespace OwnCloud.Data.DAV
                 PropertyState pItem = null;
                 DAVLocking litem = null;
 
-                while (reader.Read())
-                {
-                    switch (reader.NodeType)
-                    {
+                while (reader.Read()) {
+                    switch (reader.NodeType) {
                         // look for special elements
                         case XmlNodeType.Element:
-                            if (reader.NamespaceURI == XmlNamespaces.NsDav)
-                            {
-                                switch (reader.LocalName)
-                                {
+                            if (reader.NamespaceURI == XmlNamespaces.NsDav) {
+                                switch (reader.LocalName) {
                                     // DAV Elements
 
                                     // Response
@@ -96,8 +87,7 @@ namespace OwnCloud.Data.DAV
 
                                     // Resource type
                                     case Elements.Collection:
-                                        if (waitForResourceType)
-                                        {
+                                        if (waitForResourceType) {
                                             item.ResourceType = ResourceType.Collection;
                                         }
                                         break;
@@ -114,20 +104,17 @@ namespace OwnCloud.Data.DAV
                                         waitForLockType = true;
                                         break;
                                     case Elements.ExclusiveLocking:
-                                        if (waitForLockScope)
-                                        {
+                                        if (waitForLockScope) {
                                             litem.Scope = DAVLocking.LockScope.Exclusive;
                                         }
                                         break;
                                     case Elements.SharedLocking:
-                                        if (waitForLockScope)
-                                        {
+                                        if (waitForLockScope) {
                                             litem.Scope = DAVLocking.LockScope.Shared;
                                         }
                                         break;
                                     case Elements.WriteLocking:
-                                        if (waitForLockType)
-                                        {
+                                        if (waitForLockType) {
                                             litem.Type = DAVLocking.LockType.Write;
                                         }
                                         break;
@@ -140,27 +127,25 @@ namespace OwnCloud.Data.DAV
                                         // a pItem was already created before
                                         break;
 
-                                    case Properties.ResourceType:
+                                    case RequestProperties.ResourceType:
                                         waitForResourceType = true;
                                         break;
 
-                                    case Properties.SupportedLock:
+                                    case RequestProperties.SupportedLock:
                                         lockingList = new List<DAVLocking>();
                                         break;
-                                    
+
                                     default:
                                         lastElementName = reader.LocalName;
                                         break;
                                 }
                             }
                             break;
-                        
+
                         // clean up
                         case XmlNodeType.EndElement:
-                            if (reader.NamespaceURI == XmlNamespaces.NsDav)
-                            {
-                                switch (reader.LocalName)
-                                {
+                            if (reader.NamespaceURI == XmlNamespaces.NsDav) {
+                                switch (reader.LocalName) {
                                     // DAV Elements
                                     case Elements.PropertyState:
                                         // save to list and create a new one (which stays maybe temporary)
@@ -171,14 +156,10 @@ namespace OwnCloud.Data.DAV
                                     case Elements.Response:
                                         // clean the list
                                         // the HTTP Status is important
-                                        foreach (PropertyState state in propertyStateList)
-                                        {
-                                            if (state.Status == ServerStatus.OK)
-                                            {
+                                        foreach (PropertyState state in propertyStateList) {
+                                            if (state.Status == ServerStatus.OK) {
                                                 item.Properties = state.Properties;
-                                            }
-                                            else
-                                            {
+                                            } else {
                                                 item.FailedProperties.Add(state);
                                             }
                                         }
@@ -201,10 +182,10 @@ namespace OwnCloud.Data.DAV
                                         break;
 
                                     // DAV Properties
-                                    case Properties.ResourceType:
+                                    case RequestProperties.ResourceType:
                                         waitForResourceType = false;
                                         break;
-                                    case Properties.SupportedLock:
+                                    case RequestProperties.SupportedLock:
                                         item.Locking = lockingList;
                                         break;
 
@@ -221,8 +202,7 @@ namespace OwnCloud.Data.DAV
                             // can't set in empty element
                             if (item == null) continue;
 
-                            switch (lastElementName)
-                            {
+                            switch (lastElementName) {
                                 // DAV Elements
                                 case Elements.Reference:
                                     string _ref = Uri.UnescapeDataString(reader.Value);
@@ -236,23 +216,23 @@ namespace OwnCloud.Data.DAV
                                     s.RemoveAt(0);
                                     pItem.Status = (ServerStatus)Enum.Parse(typeof(ServerStatus), s[0], false);
                                     s.RemoveAt(0);
-                                    pItem.ServerStatusText = String.Join(" ", s.ToArray());
+                                    pItem.ServerStatusText = string.Join(" ", s.ToArray());
                                     break;
 
                                 // DAV Properties
-                                case Properties.QuotaUsedBytes:
-                                case Properties.QuotaAvailableBytes:
-                                case Properties.GetContentLength:
+                                case RequestProperties.QuotaUsedBytes:
+                                case RequestProperties.QuotaAvailableBytes:
+                                case RequestProperties.GetContentLength:
                                     pItem.Properties.Add(lastElementName, long.Parse(reader.Value));
                                     break;
-                                case Properties.DisplayName:
-                                case Properties.GetContentLanguage:
-                                case Properties.GetContentType:
-                                case Properties.GetETag:
+                                case RequestProperties.DisplayName:
+                                case RequestProperties.GetContentLanguage:
+                                case RequestProperties.GetContentType:
+                                case RequestProperties.GetETag:
                                     pItem.Properties.Add(lastElementName, reader.Value);
                                     break;
-                                case Properties.GetLastModified:
-                                case Properties.CreationDate:
+                                case RequestProperties.GetLastModified:
+                                case RequestProperties.CreationDate:
                                     pItem.Properties.Add(lastElementName, DateTime.Parse(reader.Value));
                                     break;
                             }
@@ -266,8 +246,7 @@ namespace OwnCloud.Data.DAV
         /// <summary>
         /// The associated DAV Request
         /// </summary>
-        public WebDAV Request
-        {
+        internal WebDAVClient Request {
             get;
             private set;
         }
@@ -275,14 +254,12 @@ namespace OwnCloud.Data.DAV
         /// <summary>
         /// Returns the HTTP status code.
         /// </summary>
-        public ServerStatus Status
-        {
+        internal ServerStatus Status {
             get;
             private set;
         }
 
-        public string StatusText
-        {
+        internal string StatusText {
             get;
             private set;
         }
@@ -290,8 +267,7 @@ namespace OwnCloud.Data.DAV
         /// <summary>
         /// Returns true if the result content is a multi status response.
         /// </summary>
-        public bool IsMultiState
-        {
+        internal bool IsMultiState {
             get;
             private set;
         }
@@ -300,8 +276,7 @@ namespace OwnCloud.Data.DAV
         /// Returns the raw response excluding headers.
         /// </summary>
         /// <returns></returns>
-        public Stream GetRawResponse()
-        {
+        internal MemoryStream GetRawResponse() {
             _stream.Seek(0, SeekOrigin.Begin);
             return _stream;
         }
@@ -309,42 +284,35 @@ namespace OwnCloud.Data.DAV
         /// <summary>
         /// Returns all Response properties of this request.
         /// </summary>
-        public List<Item> Items
-        {
+        internal List<Item> Items {
             get;
             private set;
         }
 
-        public void Dispose()
-        {
+        public void Dispose() {
             _stream.Dispose();
         }
 
         /// <summary>
         /// Collection of DAV properties
         /// </summary>
-        public class PropertyState
-        {
-            public Dictionary<string, object> Properties
-            {
+        internal class PropertyState {
+            internal Dictionary<string, object> Properties {
                 get;
                 set;
             }
 
-            public ServerStatus Status
-            {
+            internal ServerStatus Status {
                 get;
                 set;
             }
 
-            public string ServerStatusText
-            {
+            internal string ServerStatusText {
                 get;
                 set;
             }
 
-            public PropertyState()
-            {
+            internal PropertyState() {
                 Properties = new Dictionary<string, object>();
                 Status = ServerStatus.InternalServerError;
                 ServerStatusText = "";
@@ -354,23 +322,17 @@ namespace OwnCloud.Data.DAV
         /// <summary>
         /// Item-Sub-Class
         /// </summary>
-        public class Item
-        {
-            public Item()
-            {
-                ResourceType = DAV.ResourceType.None;
+        internal class Item {
+            internal Item() {
+                ResourceType = ResourceType.None;
                 Locking = new List<DAVLocking>();
                 FailedProperties = new List<PropertyState>();
             }
 
-            protected object _GetValue(string key, object defaultValue)
-            {
-                if (Properties.ContainsKey(key))
-                {
+            protected object GetValue(string key, object defaultValue) {
+                if (Properties.ContainsKey(key)) {
                     return Properties[key];
-                }
-                else
-                {
+                } else {
                     return defaultValue;
                 }
             }
@@ -378,131 +340,85 @@ namespace OwnCloud.Data.DAV
             /// <summary>
             /// Returns the used bytes in this quota.
             /// </summary>
-            public long QuotaUsed
-            {
-                get
-                {
-                    return (long)_GetValue(DAV.Properties.QuotaUsedBytes, (long)0);
-                }
-                set
-                {
+            internal long QuotaUsed {
+                get {
+                    return (long)GetValue(RequestProperties.QuotaUsedBytes, (long)0);
                 }
             }
 
             /// <summary>
             /// Returns the available bytes in this quota.
             /// </summary>
-            public long QuotaAvailable
-            {
-                get
-                {
-                    return (long)_GetValue(DAV.Properties.QuotaAvailableBytes, (long)0);
-                }
-                set
-                {
+            internal long QuotaAvailable {
+                get {
+                    return (long)GetValue(RequestProperties.QuotaAvailableBytes, (long)0);
                 }
             }
 
             /// <summary>
             /// ETag of this property.
             /// </summary>
-            public string ETag
-            {
-                get
-                {
-                    return (string)_GetValue(DAV.Properties.GetETag, "");
-                }
-                set
-                {
+            internal string ETag {
+                get {
+                    return (string)GetValue(RequestProperties.GetETag, "");
                 }
             }
 
             /// <summary>
             /// Returns the last modified date.
             /// </summary>
-            public DateTime LastModified
-            {
-                get
-                {
-                    return (DateTime)_GetValue(DAV.Properties.GetLastModified, new DateTime());
-                }
-                set
-                {
+            internal DateTime LastModified {
+                get {
+                    return (DateTime)GetValue(RequestProperties.GetLastModified, new DateTime());
                 }
             }
 
             /// <summary>
             /// Returns the creation date of this object.
             /// </summary>
-            public DateTime CreationDate
-            {
-                get
-                {
-                    return (DateTime)_GetValue(DAV.Properties.CreationDate, new DateTime());
-                }
-                set
-                {
+            internal DateTime CreationDate {
+                get {
+                    return (DateTime)GetValue(RequestProperties.CreationDate, new DateTime());
                 }
             }
 
             /// <summary>
             /// Returns the displayed name of a reference
             /// </summary>
-            public string DisplayName
-            {
-                get
-                {
-                    return (string)_GetValue(DAV.Properties.DisplayName, "");
-                }
-                set
-                {
+            internal string DisplayName {
+                get {
+                    return (string)GetValue(RequestProperties.DisplayName, "");
                 }
             }
 
             /// <summary>
             /// Gets locking information.
             /// </summary>
-            public List<DAVLocking> Locking
-            {
-                get;
-                set;
-            }
+            internal List<DAVLocking> Locking { get; set; }
 
             /// <summary>
             /// Returns the resource reference uri
             /// </summary>
-            public string Reference
-            {
-                get
-                {
-                    return (string)_GetValue(DAV.Elements.Reference, "");
-                }
-                set
-                {
+            internal string Reference {
+                get {
+                    return (string)GetValue(Elements.Reference, "");
                 }
             }
 
             /// <summary>
             /// The reference uri without requesting uri (relative uri)
             /// </summary>
-            public string LocalReference
-            {
-                get
-                {
-                    return (string)_GetValue(DAV.Elements.Reference+".local", "");
-                }
-                set
-                {
+            internal string LocalReference {
+                get {
+                    return (string)GetValue(Elements.Reference + ".local", "");
                 }
             }
 
             /// <summary>
             /// Returns the parent reference name.
             /// </summary>
-            public string ParentReference
-            {
-                get
-                {
+            internal string ParentReference {
+                get {
                     var p = new List<string>(Reference.Split(new string[] { "/" }, StringSplitOptions.RemoveEmptyEntries));
                     p.RemoveAt(p.Count - 1);
                     return String.Join("/", p.ToArray());
@@ -512,69 +428,48 @@ namespace OwnCloud.Data.DAV
             /// <summary>
             /// The elements resource type.
             /// </summary>
-            public ResourceType ResourceType
-            {
-                get;
-                set;
-            }
+            internal ResourceType ResourceType { get; set; }
 
             /// <summary>
             /// Gets the mime content type.
             /// </summary>
-            public string ContentType
-            {
-                get
-                {
-                    return (string)_GetValue(DAV.Properties.GetContentType, "");
-                }
-                set
-                {
+            internal string ContentType {
+                get {
+                    return (string)GetValue(RequestProperties.GetContentType, "");
                 }
             }
 
             /// <summary>
             /// Gets the content length.
             /// </summary>
-            public long ContentLength
-            {
-                get
-                {
-                    return (long)_GetValue(DAV.Properties.GetContentLength, (long)0);
-                }
-                set
-                {
+            internal long ContentLength {
+                get {
+                    return (long)GetValue(RequestProperties.GetContentLength, (long)0);
                 }
             }
 
             /// <summary>
             /// Gets the content length.
             /// </summary>
-            public string ContentLanguage
-            {
-                get
-                {
-                    return (string)_GetValue(DAV.Properties.GetContentLanguage, "");
-                }
-                set
-                {
+            internal string ContentLanguage {
+                get {
+                    return (string)GetValue(RequestProperties.GetContentLanguage, "");
                 }
             }
 
             /// <summary>
             /// Contains all properties which could be resolved.
             /// </summary>
-            public Dictionary<string,object> Properties
-            {
+            internal Dictionary<string, object> Properties {
                 get;
                 set;
             }
-            
+
             /// <summary>
             /// Returns all Properties which could not be resolved
             /// on the current item response.
             /// </summary>
-            public List<PropertyState> FailedProperties
-            {
+            internal List<PropertyState> FailedProperties {
                 get;
                 set;
             }

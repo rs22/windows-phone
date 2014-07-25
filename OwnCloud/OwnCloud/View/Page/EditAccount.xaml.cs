@@ -12,33 +12,29 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Windows.Media.Animation;
 using OwnCloud.Data;
-using OwnCloud.Data.DAV;
 using OwnCloud.Net;
 using OwnCloud.Extensions;
 using OwnCloud.View.Controls;
+using OwnCloud.WebDAV;
+using System.Threading.Tasks;
 
-namespace OwnCloud
-{
-    public partial class EditAccount : PhoneApplicationPage
-    {
+namespace OwnCloud {
+    public partial class EditAccount : PhoneApplicationPage {
 
         private TemporaryData _accountForm = new TemporaryData();
         private bool _editMode = false;
 
-        public struct AsyncHttpResponse
-        {
+        public struct AsyncHttpResponse {
             public HttpWebRequest Request;
             public Account AssociatedAccount;
 
-            public AsyncHttpResponse(HttpWebRequest request, Account account)
-            {
+            public AsyncHttpResponse(HttpWebRequest request, Account account) {
                 Request = request;
                 AssociatedAccount = account;
             }
         }
 
-        public EditAccount()
-        {
+        public EditAccount() {
             DataContext = new AccountDataContext();
             InitializeComponent();
             // NavigationContext is not available in constructor
@@ -47,14 +43,12 @@ namespace OwnCloud
             ApplicationBar.TranslateButtons();
         }
 
-        private void ProtocolButtonTap(object sender, System.Windows.Input.GestureEventArgs e)
-        {
+        private void ProtocolButtonTap(object sender, System.Windows.Input.GestureEventArgs e) {
             var button = sender as Button;
             button.Content = button.Content.ToString() == "http" ? "https" : "http";
         }
 
-        private void PageUnloaded(object sender, RoutedEventArgs e)
-        {
+        private void PageUnloaded(object sender, RoutedEventArgs e) {
             // Save form details if the user has switched
             // and want to come back
             // exclude Password
@@ -68,8 +62,7 @@ namespace OwnCloud
 
         ProgressOverlayPopup _overlay;
 
-        private void SaveTap(object sender, EventArgs e)
-        {
+        private void SaveTap(object sender, EventArgs e) {
             // this works but the on blur event is called by leaving the page
             // and will manipulate the current object so locking is required for
             // credentials
@@ -77,56 +70,44 @@ namespace OwnCloud
 
             Account account = (DataContext as AccountDataContext).CurrentAccount;
 
-            if (!account.CanSave())
-            {
+            if (!account.CanSave()) {
                 return;
             }
 
             // show overlay
-            if (_overlay == null)
-            {
+            if (_overlay == null) {
                 _overlay = new ProgressOverlayPopup("EditAccountPage_CheckingConnection".Translate());
                 _overlay.ShowCompleted += new EventHandler(OverlayFadeIn);
             }
             _overlay.Show();
         }
 
-        private void OverlayFadeIn(object obj, EventArgs e)
-        {
+        private void OverlayFadeIn(object obj, EventArgs e) {
             // Test Connection
             Account account = (DataContext as AccountDataContext).CurrentAccount;
             //this.Overlay.PerformanceBar.IsIndeterminate = true;
-            
-            try
-            {
+
+            try {
                 HttpWebRequest request = HttpWebRequest.CreateHttp(String.Format("{0:g}://{1:g}", account.Protocol, account.ServerDomain));
                 request.BeginGetResponse(new AsyncCallback(OnHTTPResponse), new AsyncHttpResponse(request, account));
-            }
-            catch (Exception)
-            {
+            } catch (Exception) {
                 // uri malformed
                 OnConnectFailed(account);
             }
-            
+
         }
 
-        private void OnHTTPResponse(IAsyncResult result)
-        {
+        private async void OnHTTPResponse(IAsyncResult result) {
             AsyncHttpResponse state = (AsyncHttpResponse)result.AsyncState;
             var success = false;
 
-            try
-            {
+            try {
                 state.Request.EndGetResponse(result);
                 success = true;
-            }
-            catch (WebException)
-            {
-                if (state.AssociatedAccount.Protocol == "https")
-                {
+            } catch (WebException) {
+                if (state.AssociatedAccount.Protocol == "https") {
                     // try to fetch certificate
-                    try
-                    {
+                    try {
                         var tls = new TLSHandshake();
                         tls.SetServerNameExtension(state.AssociatedAccount.Hostname);
                         var socket = new StreamSocket();
@@ -134,22 +115,16 @@ namespace OwnCloud
                         socket.Write(tls.CreateClientHello());
 
                         DateTime startTime = DateTime.Now;
-                        while (true)
-                        {
+                        while (true) {
                             var data = socket.Read();
-                            if (data.Length > 0)
-                            {
+                            if (data.Length > 0) {
                                 var cert = tls.FindPacket(data, TLSHandshake.TLS_HANDSHAKE_CERTIFICATE);
-                                if (cert.Length > 0)
-                                {
+                                if (cert.Length > 0) {
                                     var details = tls.GetCertificateDetails(cert);
-                                    if (details.Count > 0)
-                                    {
+                                    if (details.Count > 0) {
                                         var certDetails = details[0];
-                                        if (certDetails.ContainsKey("CN"))
-                                        {
-                                            Dispatcher.BeginInvoke(() =>
-                                            {
+                                        if (certDetails.ContainsKey("CN")) {
+                                            Dispatcher.BeginInvoke(() => {
                                                 MessageBox.Show("EditAccountPage_Connection_Rejected".Translate(state.AssociatedAccount.Hostname, certDetails["CN"], certDetails["ValidAfter"], certDetails["ValidTo"]), "EditAccountPage_Connection_Rejected_Caption".Translate(), MessageBoxButton.OK);
                                                 _overlay.Hide();
                                             });
@@ -160,32 +135,24 @@ namespace OwnCloud
                                 }
                             }
 
-                            if (DateTime.Now.Subtract(startTime).TotalSeconds > 5)
-                            {
+                            if (DateTime.Now.Subtract(startTime).TotalSeconds > 5) {
                                 break;
                             }
                         }
-                    }
-                    catch (Exception)
-                    {
+                    } catch (Exception) {
                         // Host not reachable, no SSL host or TLS version not supported
                     }
                 }
-            }
-            catch (Exception)
-            {
+            } catch (Exception) {
                 // HTTPWebRequest has failed
             }
 
-            if (success)
-            {
+            if (success) {
                 // Testing DAV
                 //TODO: Add your additional connection test statement here
                 // To complete the test all fragments must have been fired.
-                EventCollector collector = new EventCollector()
-                {
-                    Complete = () =>
-                    {
+                EventCollector collector = new EventCollector() {
+                    Complete = () => {
                         OnConnectTestComplete(success, state.AssociatedAccount);
                     }
                 };
@@ -198,69 +165,57 @@ namespace OwnCloud
                 pathsToTest.Enqueue(state.AssociatedAccount.CalDAVPath);
 
                 // create master instance
-                WebDAV davTest = new WebDAV(state.AssociatedAccount.GetUri(), state.AssociatedAccount.GetCredentials());
+                var davTest = new WebDAVClient(state.AssociatedAccount.GetUri(), state.AssociatedAccount.GetCredentials());
 
                 // call tests
-                while (pathsToTest.Count > 0)
-                {
+                while (pathsToTest.Count > 0) {
                     var path = pathsToTest.Dequeue();
-                    davTest.StartRequest(DAVRequestHeader.CreateListing(path), path, (requestResult, userObj) =>
-                    {
-                        if (requestResult.Status != ServerStatus.MultiStatus)
-                        {
-                            // all other states are fail states
-                            success = false;
-                            Dispatcher.BeginInvoke(() =>
-                            {
-                                MessageBox.Show("EditAccountPage_CheckingConnection_DAVTestFailed".Translate(userObj, requestResult.StatusText), "Error_Caption".Translate(), MessageBoxButton.OK);
-                            });
-                        }
-                        collector.Raise(userObj);
-                    });
-                }                
-            }
-            else
-            {
+                    try {
+                        await davTest.GetEntries(path, false);
+                    } catch {
+                        // all other states are fail states
+                        success = false;
+                        Dispatcher.BeginInvoke(() => {
+                            //TODO: fix message
+                            MessageBox.Show("EditAccountPage_CheckingConnection_DAVTestFailed".Translate(path, "requestResult.StatusText"), "Error_Caption".Translate(), MessageBoxButton.OK);
+                        });
+                    }
+
+                    collector.Raise(path);
+                }
+            } else {
                 OnConnectTestComplete(success, state.AssociatedAccount);
             }
-            
+
         }
 
 
-        private void OnConnectTestComplete(bool success, Account account)
-        {
-            Dispatcher.BeginInvoke(() =>
-            {
+        private void OnConnectTestComplete(bool success, Account account) {
+            Dispatcher.BeginInvoke(() => {
                 _overlay.Hide();
-                if (success)
-                {
+                if (success) {
                     StoreAccount(account);
-                }
-                else
-                {
+                } else {
                     OnConnectFailed(account);
                 }
             });
-            
+
         }
 
-        private void OnConnectFailed(Account account)
-        {
-            if (MessageBox.Show("EditAccountPage_Confirm_Store".Translate(account.Protocol, account.ServerDomain), "EditAccountPage_Confirm_Store_Caption".Translate(), MessageBoxButton.OKCancel) == MessageBoxResult.OK)
-            {
+        private void OnConnectFailed(Account account) {
+            if (MessageBox.Show("EditAccountPage_Confirm_Store".Translate(account.Protocol, account.ServerDomain), "EditAccountPage_Confirm_Store_Caption".Translate(), MessageBoxButton.OKCancel) == MessageBoxResult.OK) {
                 StoreAccount(account);
             }
         }
 
-        private void StoreAccount(Account account)
-        {
+        private void StoreAccount(Account account) {
 
             // encrypt data
             account.StoreCredentials();
 
             // edit/insert
             if (!_editMode) {
-                App.DataContext.Accounts.InsertOnSubmit(account);  
+                App.DataContext.Accounts.InsertOnSubmit(account);
             }
             App.DataContext.SubmitChanges();
 
@@ -269,24 +224,17 @@ namespace OwnCloud
             NavigationService.GoBack();
         }
 
-        private void PageLoaded(object sender, RoutedEventArgs e)
-        {
-            if (NavigationContext.QueryString.ContainsKey("mode") && NavigationContext.QueryString.ContainsKey("account"))
-            {
+        private void PageLoaded(object sender, RoutedEventArgs e) {
+            if (NavigationContext.QueryString.ContainsKey("mode") && NavigationContext.QueryString.ContainsKey("account")) {
                 _editMode = NavigationContext.QueryString["mode"] == "edit";
-                try
-                {
+                try {
                     var account = App.DataContext.LoadAccount(NavigationContext.QueryString["account"]);
                     account.RestoreCredentials();
                     (DataContext as AccountDataContext).CurrentAccount = account;
-                }
-                catch (Exception)
-                {
+                } catch (Exception) {
                     // should not happen
                 }
-            }
-            else
-            {
+            } else {
                 _editMode = false;
             }
 
@@ -294,8 +242,7 @@ namespace OwnCloud
 
             // If there are any stored form details
             // include here if DataContext is empty
-            if ((DataContext as AccountDataContext).CurrentAccount == null)
-            {
+            if ((DataContext as AccountDataContext).CurrentAccount == null) {
                 Account account = (Account)_accountForm.Restore(_editMode ? "EditAccountForm" : "AddAccountForm", new Account());
                 account.RestoreCredentials();
                 (DataContext as AccountDataContext).CurrentAccount = account;

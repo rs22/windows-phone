@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace OwnCloud.Data.DAV
-{
-    class DAVLocking
+namespace OwnCloud.WebDAV {
+    public class DAVLocking
     {
         /// <summary>
         /// Specifies whether a lock is an exclusive lock, or a shared lock.

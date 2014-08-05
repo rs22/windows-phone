@@ -2,13 +2,16 @@
 using System.Linq;
 using Microsoft.Phone.Shell;
 using OwnCloud.Data;
+using OwnCloud.Common.Accounts;
+using OwnCloud.Storage;
+using System.Threading.Tasks;
 
 namespace OwnCloud.Extensions
 {
     public static class TileHelper
     {
 
-        public static void AddCalendarToTile(int _accountID)
+        public static async Task AddCalendarToTile(Guid _accountID)
         {
             string name = Resource.Localization.AppResources.Tile_KalendarTitle;
 
@@ -16,8 +19,9 @@ namespace OwnCloud.Extensions
             {
                 using (var context = new OwnCloudDataContext())
                 {
-                    var account = context.Accounts.Single(o => o.GUID == _accountID);
-                    account.RestoreCredentials();
+                    var account = await App.AccountService.GetAccountByID(_accountID);
+                    // TODO: this will edit the account in the list
+                    await App.AccountService.RestoreCredentials(account);
                     name = account.Username + " " + name;
                 }
             }
@@ -33,7 +37,7 @@ namespace OwnCloud.Extensions
             PinUrlToStart(invokeUrl, name, "Resource/Image/CalendarLogo.png");
         }
 
-        public static void AddOnlineFilesToTile(int _accountID)
+        public static async Task AddOnlineFilesToTile(Guid _accountID)
         {
             string name = Resource.Localization.AppResources.Tile_RemoteFileTitle;
 
@@ -41,8 +45,9 @@ namespace OwnCloud.Extensions
             {
                 using (var context = new OwnCloudDataContext())
                 {
-                    var account = context.Accounts.Single(o => o.GUID == _accountID);
-                    account.RestoreCredentials();
+                    var account = await App.AccountService.GetAccountByID(_accountID);
+                    // TODO: this will edit the account in the list
+                    await App.AccountService.RestoreCredentials(account);
                     name = account.Username + " " + name;
                 }
             }

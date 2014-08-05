@@ -32,23 +32,9 @@ namespace OwnCloud.Data
 
         public Table<TableCalendar> Calendars;
         public Table<TableEvent> Events;
-        public Table<Account> Accounts;
 
         private DispatcherTimer _deviceStatusTimer;
         private IsolatedStorageFile _isf;
-
-        /// <summary>
-        /// Loads an account from the datebase.
-        /// </summary>
-        /// <param name="guid"></param>
-        /// <returns></returns>
-        public Account LoadAccount(object guid)
-        {
-            var accounts = from acc in Accounts
-                           where acc.GUID == int.Parse(guid.ToString())
-                           select acc;
-            return accounts.First();
-        }
 
         /// <summary>
         /// Example File List

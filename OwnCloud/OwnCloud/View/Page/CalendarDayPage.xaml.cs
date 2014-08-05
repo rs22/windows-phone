@@ -26,7 +26,7 @@ namespace OwnCloud.View.Page
 
         }
 
-        private int _userId;
+        private Guid _userId;
         private ScrollViewer _dayScoller;
         private DateTime _startDate;
 
@@ -39,7 +39,7 @@ namespace OwnCloud.View.Page
         {
             //Get userid in query
             if (NavigationContext.QueryString.ContainsKey("uid"))
-                _userId = int.Parse(NavigationContext.QueryString["uid"]);
+                _userId = Guid.Parse(NavigationContext.QueryString["uid"]);
             else throw new ArgumentNullException("uid", AppResources.Exception_NoUserID);
 
             try

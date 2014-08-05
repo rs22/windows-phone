@@ -1,4 +1,5 @@
-﻿using System.Data.Linq;
+﻿using System;
+using System.Data.Linq;
 using System.Data.Linq.Mapping;
 
 namespace OwnCloud.Data
@@ -12,20 +13,7 @@ namespace OwnCloud.Data
         #region Parent Account
 
         [Column]
-        internal int? _accountId;
-        private Account _account;
-        [Association(Storage = "_account", ThisKey = "_accountId", OtherKey = "GUID", IsForeignKey = true)]
-        public Account Account
-        {
-            get
-            {
-                return _account;
-            }
-            set
-            {
-                _account = value;
-            }
-        } 
+        internal Guid? _accountId;
 
         #endregion
 

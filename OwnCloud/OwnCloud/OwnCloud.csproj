@@ -65,15 +65,29 @@
     </Reference>
     <Reference Include="system.data.linq" />
     <Reference Include="System.Device" />
-    <Reference Include="System.IO">
-      <HintPath>..\packages\Microsoft.Bcl.1.1.8\lib\sl4-windowsphone71\System.IO.dll</HintPath>
+    <Reference Include="System.IO, Version=1.5.11.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Bcl.1.1.9\lib\sl4-windowsphone71\System.IO.dll</HintPath>
     </Reference>
-    <Reference Include="System.Runtime">
-      <HintPath>..\packages\Microsoft.Bcl.1.1.8\lib\sl4-windowsphone71\System.Runtime.dll</HintPath>
+    <Reference Include="System.Net.Http, Version=1.5.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Net.Http.2.2.22\lib\sl4-windowsphone71\System.Net.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http.Extensions">
+      <HintPath>..\packages\Microsoft.Net.Http.2.2.22\lib\sl4-windowsphone71\System.Net.Http.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http.Primitives, Version=1.5.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Net.Http.2.2.22\lib\sl4-windowsphone71\System.Net.Http.Primitives.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime, Version=1.5.11.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Bcl.1.1.9\lib\sl4-windowsphone71\System.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Threading.Tasks">
-      <HintPath>..\packages\Microsoft.Bcl.1.1.8\lib\sl4-windowsphone71\System.Threading.Tasks.dll</HintPath>
+    <Reference Include="System.Threading.Tasks, Version=1.5.11.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Bcl.1.1.9\lib\sl4-windowsphone71\System.Threading.Tasks.dll</HintPath>
     </Reference>
     <Reference Include="System.Windows" />
     <Reference Include="system" />
@@ -152,6 +166,9 @@
       <DesignTime>True</DesignTime>
     </Compile>
     <Compile Include="Resource\ResourceLoader.cs" />
+    <Compile Include="Storage\PlatformFileAccess.cs" />
+    <Compile Include="Storage\ProtectedDataService.cs" />
+    <Compile Include="Storage\Serializer.cs" />
     <Compile Include="View\Controls\CalendarControl.xaml.cs" />
     <Compile Include="View\Controls\CalendarDayControl.xaml.cs" />
     <Compile Include="View\Controls\CalendarDayOverview.xaml.cs">
@@ -202,7 +219,6 @@
     <Compile Include="Net\TLSHandshake.cs" />
     <Compile Include="Extensions\Utility.cs" />
     <Compile Include="Data\AccountListDataContext.cs" />
-    <Compile Include="Data\Account.cs" />
     <Compile Include="Data\File.cs" />
     <Compile Include="View\Page\RemoteFiles.xaml.cs">
       <DependentUpon>RemoteFiles.xaml</DependentUpon>
@@ -341,6 +357,10 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\OwnCloud.Common\OwnCloud.Common.csproj">
+      <Project>{0151566E-0C8F-4035-A99F-26778E8F0C37}</Project>
+      <Name>OwnCloud.Common</Name>
+    </ProjectReference>
     <ProjectReference Include="..\OwnCloud.WebDAV\OwnCloud.WebDAV.csproj">
       <Project>{8D0BE294-0984-4276-A843-3A3FFCF48998}</Project>
       <Name>OwnCloud.WebDAV</Name>

@@ -17,6 +17,8 @@ using OwnCloud.Extensions;
 using OwnCloud.View.Controls;
 using OwnCloud.WebDAV;
 using System.Threading.Tasks;
+using OwnCloud.Common.Accounts;
+using OwnCloud.Storage;
 
 namespace OwnCloud {
     public partial class EditAccount : PhoneApplicationPage {
@@ -165,7 +167,7 @@ namespace OwnCloud {
                 pathsToTest.Enqueue(state.AssociatedAccount.CalDAVPath);
 
                 // create master instance
-                var davTest = new WebDAVClient(state.AssociatedAccount.GetUri(), state.AssociatedAccount.GetCredentials());
+                var davTest = new WebDAVClient(state.AssociatedAccount.GetUri(), await App.AccountService.GetCredentials(state.AssociatedAccount));
 
                 // call tests
                 while (pathsToTest.Count > 0) {
@@ -191,10 +193,10 @@ namespace OwnCloud {
 
 
         private void OnConnectTestComplete(bool success, Account account) {
-            Dispatcher.BeginInvoke(() => {
+            Dispatcher.BeginInvoke(async () => {
                 _overlay.Hide();
                 if (success) {
-                    StoreAccount(account);
+                    await StoreAccount(account);
                 } else {
                     OnConnectFailed(account);
                 }
@@ -202,34 +204,34 @@ namespace OwnCloud {
 
         }
 
-        private void OnConnectFailed(Account account) {
+        private async void OnConnectFailed(Account account) {
             if (MessageBox.Show("EditAccountPage_Confirm_Store".Translate(account.Protocol, account.ServerDomain), "EditAccountPage_Confirm_Store_Caption".Translate(), MessageBoxButton.OKCancel) == MessageBoxResult.OK) {
-                StoreAccount(account);
+                await StoreAccount(account);
             }
         }
 
-        private void StoreAccount(Account account) {
+        private async Task StoreAccount(Account account) {
 
             // encrypt data
-            account.StoreCredentials();
+            await App.AccountService.UpdateCredentials(account);
 
             // edit/insert
             if (!_editMode) {
-                App.DataContext.Accounts.InsertOnSubmit(account);
+                App.AccountService.AddAccount(account);
             }
-            App.DataContext.SubmitChanges();
+            await App.AccountService.SaveAccounts();
 
             // temporary data can be deleted
             _accountForm.Remove(_editMode ? "EditAccountForm" : "AddAccountForm");
             NavigationService.GoBack();
         }
 
-        private void PageLoaded(object sender, RoutedEventArgs e) {
+        private async void PageLoaded(object sender, RoutedEventArgs e) {
             if (NavigationContext.QueryString.ContainsKey("mode") && NavigationContext.QueryString.ContainsKey("account")) {
                 _editMode = NavigationContext.QueryString["mode"] == "edit";
                 try {
-                    var account = App.DataContext.LoadAccount(NavigationContext.QueryString["account"]);
-                    account.RestoreCredentials();
+                    var account = await App.AccountService.GetAccountByID(Guid.Parse(NavigationContext.QueryString["account"]));
+                    await App.AccountService.RestoreCredentials(account);
                     (DataContext as AccountDataContext).CurrentAccount = account;
                 } catch (Exception) {
                     // should not happen
@@ -244,7 +246,7 @@ namespace OwnCloud {
             // include here if DataContext is empty
             if ((DataContext as AccountDataContext).CurrentAccount == null) {
                 Account account = (Account)_accountForm.Restore(_editMode ? "EditAccountForm" : "AddAccountForm", new Account());
-                account.RestoreCredentials();
+                await App.AccountService.RestoreCredentials(account);
                 (DataContext as AccountDataContext).CurrentAccount = account;
             }
         }

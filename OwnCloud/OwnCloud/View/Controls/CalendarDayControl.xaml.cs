@@ -26,7 +26,7 @@ namespace Ocwp.Controls
             set { _targetDate = value.Date; }
         }
 
-        public int AccountID { get; set; }
+        public Guid AccountID { get; set; }
         
         private void ContextMenu_OnOpened(object sender, RoutedEventArgs e)
         {
@@ -54,10 +54,10 @@ namespace Ocwp.Controls
         {
             var dbEvent = (sender as FrameworkElement).DataContext as TableEvent;
 
-            int accountID = 0;
+            Guid accountID = Guid.Empty;
             using (var context = new OwnCloudDataContext())
             {
-                accountID = context.Calendars.Where(o => o.Id == dbEvent.CalendarId).Single()._accountId ?? 0;
+                accountID = context.Calendars.Where(o => o.Id == dbEvent.CalendarId).Single()._accountId ?? Guid.Empty;
             }
 
             //TODO: Import Edit Page..

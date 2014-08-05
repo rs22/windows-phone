@@ -49,8 +49,8 @@ namespace OwnCloud.View.Controls
 
         #region Public Properties
 
-        private int? _accountID;
-        public int? AccountID
+        private Guid? _accountID;
+        public Guid? AccountID
         {
             get { return _accountID; }
             set 
@@ -167,7 +167,7 @@ namespace OwnCloud.View.Controls
                     Grid.SetRow(dayIndicator, j + 1);
                     GrdDayIndicator.Children.Add(dayIndicator);
 
-                    var dayOpenControl = new CalendarDayControl {TargetDate = fieldDate,AccountID = _accountID ?? 0};
+                    var dayOpenControl = new CalendarDayControl {TargetDate = fieldDate,AccountID = _accountID ?? Guid.Empty};
                     Grid.SetColumn(dayOpenControl, i);
                     Grid.SetRow(dayOpenControl, j + 1);
                     GrdCalendarLines.Children.Add(dayOpenControl);

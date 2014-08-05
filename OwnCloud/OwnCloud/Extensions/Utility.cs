@@ -43,19 +43,6 @@ namespace OwnCloud
             return String.Format(format_code, size / c, postfix);
         }
 
-        static public string EncryptString(string input)
-        {
-            if (input == null) return "";
-            byte[] crypted = ProtectedData.Protect(Encoding.UTF8.GetBytes(input), null);
-            return System.Convert.ToBase64String(crypted, 0, crypted.Length);
-        }
-
-        static public string DecryptString(string input)
-        {
-            byte[] decrypted = ProtectedData.Unprotect(System.Convert.FromBase64String(input), null);
-            return Encoding.UTF8.GetString(decrypted, 0, decrypted.Length);
-        }
-
         static public void Debug(string input)
         {
             var max = 100;

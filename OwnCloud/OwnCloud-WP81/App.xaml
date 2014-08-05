@@ -1,0 +1,27 @@
+﻿<Application
+    x:Class="OwnCloud.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:OwnCloud"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    xmlns:vm="using:OwnCloud.ViewModel"
+    RequestedTheme="Light">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="HubBackgroundImageBrush" Color="White"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <ImageBrush x:Key="HubBackgroundImageBrush" ImageSource="{x:Null}"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <vm:ViewModelLocator x:Key="Locator"
+                             d:IsDataSource="True" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

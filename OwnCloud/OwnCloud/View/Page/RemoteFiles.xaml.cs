@@ -13,11 +13,11 @@ using OwnCloud.View.Controls;
 using OwnCloud.Extensions;
 using OwnCloud.WebDAV;
 using System.Threading.Tasks;
+using OwnCloud.Common.Accounts;
+using OwnCloud.Storage;
 
-namespace OwnCloud.View.Page
-{
-    public partial class RemoteFiles : PhoneApplicationPage
-    {
+namespace OwnCloud.View.Page {
+    public partial class RemoteFiles : PhoneApplicationPage {
 
         private Account _workingAccount;
         private FileListDataContext _context;
@@ -25,8 +25,7 @@ namespace OwnCloud.View.Page
         private int _viewIndex = 0;
         private string _workingPath = "";
 
-        public RemoteFiles()
-        {
+        public RemoteFiles() {
             InitializeComponent();
             _context = new FileListDataContext();
             DataContext = _context;
@@ -34,81 +33,62 @@ namespace OwnCloud.View.Page
             // ApplicationBar.TranslateButtons();
         }
 
-        private void ToggleTray()
-        {
-            Dispatcher.BeginInvoke(() =>
-            {
+        private void ToggleTray() {
+            Dispatcher.BeginInvoke(() => {
                 SystemTray.SetIsVisible(this, !SystemTray.IsVisible);
             });
         }
 
-        private void PageLoaded(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                _workingAccount = App.DataContext.LoadAccount(NavigationContext.QueryString["account"]);
-                _workingAccount.RestoreCredentials();
-            }
-            catch (Exception)
-            {
+        private async void PageLoaded(object sender, RoutedEventArgs e) {
+            try {
+                _workingAccount = await App.AccountService.GetAccountByID(Guid.Parse(NavigationContext.QueryString["account"]));
+                // TODO: this will edit the account in the list
+                await App.AccountService.RestoreCredentials(_workingAccount);
+            } catch (Exception ex) {
                 // should not happen
             }
             ApplicationBar = (ApplicationBar)Resources["DefaultAppBar"];
             ApplicationBar.TranslateButtons();
-            FetchStructure(_workingAccount.WebDAVPath);
+            await FetchStructure(_workingAccount.WebDAVPath);
         }
 
-        private void ChangeView(object sender, EventArgs e)
-        {
-            if (_viewIndex + 1 < _views.Length)
-            {
+        private async void ChangeView(object sender, EventArgs e) {
+            if (_viewIndex + 1 < _views.Length) {
                 ++_viewIndex;
-            }
-            else
-            {
+            } else {
                 _viewIndex = 0;
             }
-            FetchStructure(_workingPath);
+            await FetchStructure(_workingPath);
         }
-
-        private WebDAVFile _item;
 
         /// <summary>
         /// Tries to fetch a given path and refreshes the views.
         /// </summary>
         /// <param name="path"></param>
-        private void FetchStructure(string path)
-        {
+        private async Task FetchStructure(string path) {
             string viewMode = _views[_viewIndex];
             _workingPath = path;
 
             progress.IsVisible = true;
             progress.Text = "Fetching Structure...";
 
-            switch (viewMode)
-            {
+            switch (viewMode) {
                 case "tile":
                     DetailList.Hide();
                     DetailList.Items.Clear();
                     TileViewContainer.Show();
 
                     // fadeout existig from tile view
-                    if (TileView.Children.Count == 0)
-                    {
-                        StartRequest();
-                    }
-                    else
-                    {
+                    if (TileView.Children.Count == 0) {
+                        await QueryStructure();
+                    } else {
                         int itemsLeft = TileView.Children.Count;
-                        foreach (FrameworkElement item in TileView.Children)
-                        {
-                            item.FadeOut(100, () =>
-                            {
+                        foreach (FrameworkElement item in TileView.Children) {
+                            item.FadeOut(100, async () => {
                                 --itemsLeft;
-                                if (itemsLeft <= 0)
-                                {
+                                if (itemsLeft <= 0) {
                                     TileView.Children.Clear();
-                                    StartRequest();
+                                    await QueryStructure();
                                 }
                             });
                         }
@@ -119,22 +99,16 @@ namespace OwnCloud.View.Page
                     TileViewContainer.Hide();
                     DetailList.Show();
                     // fadeout existing from detail view
-                    if (DetailList.Items.Count == 0)
-                    {
-                        StartRequest();
-                    }
-                    else
-                    {
+                    if (DetailList.Items.Count == 0) {
+                        await QueryStructure();
+                    } else {
                         int detailItemsLeft = DetailList.Items.Count;
-                        foreach (FrameworkElement item in DetailList.Items)
-                        {
-                            item.FadeOut(100, () =>
-                            {
+                        foreach (FrameworkElement item in DetailList.Items) {
+                            item.FadeOut(100, async () => {
                                 --detailItemsLeft;
-                                if (detailItemsLeft <= 0)
-                                {
+                                if (detailItemsLeft <= 0) {
                                     DetailList.Items.Clear();
-                                    StartRequest();
+                                    await QueryStructure();
                                 }
                             });
                         }
@@ -145,12 +119,12 @@ namespace OwnCloud.View.Page
             // start overlay
         }
 
-        private async Task StartRequest()
-        {
-            var dav = new WebDAVClient(_workingAccount.GetUri(), _workingAccount.GetCredentials());
+        private async Task QueryStructure() {
+            var dav = new WebDAVClient(_workingAccount.GetUri(), await App.AccountService.GetCredentials(_workingAccount));
             try {
                 var entries = await dav.GetEntries(_workingPath, true);
                 if (entries.Count == 0) throw new Exception("No entries found");
+
                 bool _firstItem = false;
                 // display all items linear
                 // we cannot wait till an item is displayed, instead for a fluid
@@ -171,119 +145,107 @@ namespace OwnCloud.View.Page
 
                     bool display = true;
 
-                    Dispatcher.BeginInvoke(() => {
 
-                        switch (_views[_viewIndex]) {
-                            case "detail":
-                                if (!_firstItem) {
-                                    _firstItem = true;
+                    switch (_views[_viewIndex]) {
+                        case "detail":
+                            if (!_firstItem) {
+                                _firstItem = true;
 
-                                    // Root
-                                    if (fileItem.IsDirectory) {
-                                        if (item.FilePath.ToString() == _workingAccount.WebDAVPath) {
-                                            // cannot go up further
-                                            display = false;
-                                        } else {
-                                            fileItem.IsRootItem = true;
-                                            fileItem.FilePath = fileItem.FileParentPath;
-                                        }
+                                // Root
+                                if (fileItem.IsDirectory) {
+                                    if (item.FilePath.ToString() == _workingAccount.WebDAVPath) {
+                                        // cannot go up further
+                                        display = false;
+                                    } else {
+                                        fileItem.IsRootItem = true;
+                                        fileItem.FilePath = fileItem.FileParentPath;
                                     }
                                 }
+                            }
 
-                                if (display) {
-                                    FileDetailViewControl detailControl = new FileDetailViewControl() {
-                                        DataContext = fileItem,
-                                        Opacity = 0,
-                                        Background = new SolidColorBrush() { Color = Colors.Transparent },
-                                    };
+                            if (display) {
+                                FileDetailViewControl detailControl = new FileDetailViewControl() {
+                                    DataContext = fileItem,
+                                    Opacity = 0,
+                                    Background = new SolidColorBrush() { Color = Colors.Transparent },
+                                };
 
-                                    DetailList.Items.Add(detailControl);
-                                    detailControl.Delay(delayStart, () => {
-                                        detailControl.FadeIn(100);
-                                    });
-                                    delayStart += delayStep;
-                                }
-                                break;
+                                DetailList.Items.Add(detailControl);
+                                detailControl.Delay(delayStart, () => {
+                                    detailControl.FadeIn(100);
+                                });
+                                delayStart += delayStep;
+                            }
+                            break;
 
-                            case "tile":
-                                if (!_firstItem) {
-                                    _firstItem = true;
+                        case "tile":
+                            if (!_firstItem) {
+                                _firstItem = true;
 
-                                    // Root
-                                    if (fileItem.IsDirectory) {
-                                        if (item.FilePath.ToString() == _workingAccount.WebDAVPath) {
-                                            // cannot go up further
-                                            display = false;
-                                        } else {
-                                            fileItem.IsRootItem = true;
-                                            fileItem.FilePath = fileItem.FileParentPath;
-                                        }
+                                // Root
+                                if (fileItem.IsDirectory) {
+                                    if (item.FilePath.ToString() == _workingAccount.WebDAVPath) {
+                                        // cannot go up further
+                                        display = false;
+                                    } else {
+                                        fileItem.IsRootItem = true;
+                                        fileItem.FilePath = fileItem.FileParentPath;
                                     }
                                 }
+                            }
 
-                                if (display) {
-                                    FileMultiTileViewControl multiControl = new FileMultiTileViewControl(_workingAccount, fileItem, true) {
-                                        Width = 200,
-                                        Height = 200,
-                                        Opacity = 0,
-                                        Margin = new Thickness(0, 0, 10, 10),
-                                    };
-                                    multiControl.Tap += new EventHandler<System.Windows.Input.GestureEventArgs>(TileListSelectionChanged);
+                            if (display) {
+                                FileMultiTileViewControl multiControl = new FileMultiTileViewControl(_workingAccount, fileItem, true) {
+                                    Width = 200,
+                                    Height = 200,
+                                    Opacity = 0,
+                                    Margin = new Thickness(0, 0, 10, 10),
+                                };
+                                multiControl.Tap += new EventHandler<System.Windows.Input.GestureEventArgs>(TileListSelectionChanged);
 
-                                    // sometimes the exception "wrong parameter" is thrown - but why???
-                                    TileView.Children.Add(multiControl);
-                                    multiControl.Delay(delayStart, () => {
-                                        multiControl.FadeIn(100);
-                                    });
-                                }
+                                // sometimes the exception "wrong parameter" is thrown - but why???
+                                TileView.Children.Add(multiControl);
+                                multiControl.Delay(delayStart, () => {
+                                    multiControl.FadeIn(100);
+                                });
+                            }
 
-                                break;
-                        }
-                    });
+                            break;
+                    }
                 }
 
-                Dispatcher.BeginInvoke(() => {
-                    progress.IsVisible = false;
-                });
+                progress.IsVisible = false;
             } catch (Exception ex) {
-                Dispatcher.BeginInvoke(() => {
-                    progress.IsVisible = false;
-                    var webException = ex as WebException;
-                    var webResponse = webException != null ? webException.Response as HttpWebResponse : null;
-                    if (webException != null && 
-                        webException.Status == WebExceptionStatus.ProtocolError &&
-                        webResponse != null &&
-                        webResponse.StatusCode == HttpStatusCode.Unauthorized) {
-                        MessageBox.Show("FetchFile_Unauthorized".Translate(), "Error_Caption".Translate(), MessageBoxButton.OK);
-                    } else {
-                        MessageBox.Show("FetchFile_Unexpected_Result".Translate(), "Error_Caption".Translate(), MessageBoxButton.OK);
-                    }
-                });
+                progress.IsVisible = false;
+                var webException = ex as WebException;
+                var webResponse = webException != null ? webException.Response as HttpWebResponse : null;
+                if (webException != null &&
+                    webException.Status == WebExceptionStatus.ProtocolError &&
+                    webResponse != null &&
+                    webResponse.StatusCode == HttpStatusCode.Unauthorized) {
+                    MessageBox.Show("FetchFile_Unauthorized".Translate(), "Error_Caption".Translate(), MessageBoxButton.OK);
+                } else {
+                    MessageBox.Show("FetchFile_Unexpected_Result".Translate(), "Error_Caption".Translate(), MessageBoxButton.OK);
+                }
             }
         }
 
-        private void TileListSelectionChanged(object sender, EventArgs e)
-        {
+        private async void TileListSelectionChanged(object sender, EventArgs e) {
             FileMultiTileViewControl item = sender as FileMultiTileViewControl;
-            OpenItem(item.FileProperties);
+            await OpenItem(item.FileProperties);
         }
 
-        private void DetailListSelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
+        private async void DetailListSelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (DetailList.Items.Count == 0) return;
 
             FileDetailViewControl item = (FileDetailViewControl)(DetailList.SelectedItem);
-            OpenItem(item.FileProperties);
+            await OpenItem(item.FileProperties);
         }
 
-        private void OpenItem(File item)
-        {
-            if (item.IsDirectory)
-            {
-                FetchStructure(item.FilePath);
-            }
-            else
-            {
+        private async Task OpenItem(File item) {
+            if (item.IsDirectory) {
+                await FetchStructure(item.FilePath);
+            } else {
                 //todo: win8 file+uri associations callers
                 //todo: open file
             }

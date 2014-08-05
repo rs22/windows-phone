@@ -31,8 +31,7 @@ namespace OwnCloud.View.Page
 
         #region Private Fields
 
-        private int _userId;
-        private Data.Account _account;
+        private Guid _userId;
         private Data.OwnCloudDataContext _context;
         private Data.OwnCloudDataContext Context
         {
@@ -55,7 +54,7 @@ namespace OwnCloud.View.Page
         {
             //Get userid in query
             if (NavigationContext.QueryString.ContainsKey("uid"))
-                _userId = int.Parse(NavigationContext.QueryString["uid"]);
+                _userId = Guid.Parse(NavigationContext.QueryString["uid"]);
             else throw new ArgumentNullException("uid", AppResources.Exception_NoUserID);
 
             LoadCalendars();

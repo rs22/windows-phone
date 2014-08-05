@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OwnCloud.WebDAV.Tests", "Ow
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OwnCloud.Tests", "OwnCloud.Tests\OwnCloud.Tests.csproj", "{F519EDD0-D627-4AC1-BD58-98D91C5F0FD0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OwnCloud.Common", "OwnCloud.Common\OwnCloud.Common.csproj", "{0151566E-0C8F-4035-A99F-26778E8F0C37}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,6 +39,10 @@ Global
 		{F519EDD0-D627-4AC1-BD58-98D91C5F0FD0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F519EDD0-D627-4AC1-BD58-98D91C5F0FD0}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F519EDD0-D627-4AC1-BD58-98D91C5F0FD0}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{0151566E-0C8F-4035-A99F-26778E8F0C37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0151566E-0C8F-4035-A99F-26778E8F0C37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0151566E-0C8F-4035-A99F-26778E8F0C37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0151566E-0C8F-4035-A99F-26778E8F0C37}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

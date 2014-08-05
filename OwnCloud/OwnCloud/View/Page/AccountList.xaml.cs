@@ -11,6 +11,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Media.Animation;
 using OwnCloud.Data;
 using OwnCloud.Extensions;
+using OwnCloud.Common.Accounts;
 
 namespace OwnCloud
 {
@@ -62,7 +63,7 @@ namespace OwnCloud
              originMargin = control.Margin;
         }
 
-        private void AccountsList_ManipulationComplete(object sender, System.Windows.Input.ManipulationCompletedEventArgs e)
+        private async void AccountsList_ManipulationComplete(object sender, System.Windows.Input.ManipulationCompletedEventArgs e)
         {
             FrameworkElement control = (FrameworkElement)sender;
             if (control.Opacity > 0)
@@ -77,8 +78,8 @@ namespace OwnCloud
                 if (MessageBox.Show("AccountsPage_Confirm_Delete".Translate(account.ServerDomain), "AccountsPage_Confirm_Delete_Caption".Translate(), MessageBoxButton.OKCancel) == MessageBoxResult.OK)
                 {
                     // delete object from db
-                    App.DataContext.Accounts.DeleteOnSubmit(account);
-                    App.DataContext.SubmitChanges();
+                    await App.AccountService.DeleteAccount(account);
+                    await App.AccountService.SaveAccounts();
                     // "reload"
                     AccountsList.ItemsSource = new AccountListDataContext().Accounts;
                 }

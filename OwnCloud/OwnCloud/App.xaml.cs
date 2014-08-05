@@ -13,6 +13,8 @@ using System.Windows.Shapes;
 using Microsoft.Phone.Controls;
 using Microsoft.Phone.Shell;
 using OwnCloud.Data;
+using OwnCloud.Common.Accounts;
+using OwnCloud.Storage;
 
 namespace OwnCloud
 {
@@ -28,6 +30,8 @@ namespace OwnCloud
                 return _context;
             }
         }
+
+        public static AccountService AccountService = new AccountService(new ProtectedDataService(), new Serializer());
 
         public PhoneApplicationFrame RootFrame { get; private set; }
 

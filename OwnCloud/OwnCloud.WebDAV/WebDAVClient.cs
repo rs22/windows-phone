@@ -40,7 +40,7 @@ namespace OwnCloud.WebDAV {
                 throw new Exception("Error downloading entries");
             }
         }
-        
+
         /// <summary>
         /// Starts an asynchronous DAV-HTTP-Request.
         /// </summary>
@@ -76,9 +76,21 @@ namespace OwnCloud.WebDAV {
                 }
             }
 
-            return await Task<WebResponse>.Factory
-                .FromAsync(request.BeginGetResponse, request.EndGetResponse, request)
-                .ContinueWith(response => new DAVRequestResult(this, response.Result as HttpWebResponse, _relativeHost));
+            WebException webException = null;
+            var result = await Task<WebResponse>.Factory.FromAsync(request.BeginGetResponse, request.EndGetResponse, request)
+                .ContinueWith(t => {
+                    if (t.IsFaulted && t.Exception.InnerException is WebException) {
+                        webException = t.Exception.InnerException as WebException;
+                        return null;
+                    }
+
+                    return new DAVRequestResult(this, t.Result as HttpWebResponse, _relativeHost);
+                });
+
+            if (webException != null)
+                throw webException;
+
+            return result;
         }
     }
 }

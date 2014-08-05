@@ -10,6 +10,7 @@ using System.Windows.Media.Imaging;
 using Microsoft.Phone.Controls;
 using Microsoft.Phone.Shell;
 using OwnCloud.Data;
+using OwnCloud.Common.Accounts;
 
 namespace OwnCloud.View.Controls
 {

@@ -10,6 +10,8 @@ using OwnCloud.Data.Calendar;
 using OwnCloud.Data.Calendar.Parsing;
 using OwnCloud.Extensions;
 using OwnCloud.Net;
+using OwnCloud.Common.Accounts;
+using System.Threading.Tasks;
 
 namespace OwnCloud.View.Page
 {
@@ -32,7 +34,7 @@ namespace OwnCloud.View.Page
         }
 
         private string _url;
-        private int _accountId;
+        private Guid _accountId;
 
         private OwnCloudDataContext _context;
         public OwnCloudDataContext Context
@@ -44,12 +46,12 @@ namespace OwnCloud.View.Page
         private Account _account;
         public Account Account
         {
-            get { return _account ?? (Context.Accounts.Single(o => o.GUID == _accountId)); }
+            get { return _account; }
             set { _account = value; }
         }
 
 
-        protected override void OnNavigatedTo(NavigationEventArgs e)
+        protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             if (e.NavigationMode == NavigationMode.Back)
                 return;
@@ -58,8 +60,10 @@ namespace OwnCloud.View.Page
                 LoadFromUrl(NavigationContext.QueryString["url"]);
 
             //Load Account ID
-            if (NavigationContext.QueryString.ContainsKey("uid"))
-                _accountId = int.Parse(NavigationContext.QueryString["uid"]);
+            if (NavigationContext.QueryString.ContainsKey("uid")) {
+                _accountId = Guid.Parse(NavigationContext.QueryString["uid"]);
+                _account = await App.AccountService.GetAccountByID(_accountId);
+            }
 
             base.OnNavigatedTo(e);
         }
@@ -110,17 +114,17 @@ namespace OwnCloud.View.Page
             }
         }
 
-        private void SaveExisting()
+        private async Task SaveExisting()
         {
             LockPage();
 
             var dbEvent = Context.Events.SingleOrDefault(o => o.Url == _url);
             if (dbEvent == null) return;
 
-            SaveTableEvent(dbEvent);
+            await SaveTableEvent(dbEvent);
         }
 
-        private void SaveTableEvent(TableEvent dbEvent)
+        private async Task SaveTableEvent(TableEvent dbEvent)
         {
             dbEvent.From = (DpFrom.Value ?? DateTime.Now).CombineWithTime(TpFrom.Value ?? DateTime.Now);
             dbEvent.To = (DpTo.Value ?? DateTime.Now).CombineWithTime(TpTo.Value ?? DateTime.Now);
@@ -143,7 +147,7 @@ namespace OwnCloud.View.Page
 
             CalendarDataUpdater.UpdateCalendarData(dbEvent, TbDescription.Text, false);
 
-            var ocCLient = LoadOcCalendarClient();
+            var ocCLient = await LoadOcCalendarClient();
             ocCLient.SaveEventComplete += ocCLient_SaveEventComplete;
             ocCLient.SaveEvent(dbEvent);
 
@@ -163,9 +167,9 @@ namespace OwnCloud.View.Page
         /// <summary>
         /// Deletes the current existing event
         /// </summary>
-        private void DeleteExisting()
+        private async Task DeleteExisting()
         {
-            var client = LoadOcCalendarClient();
+            var client = await LoadOcCalendarClient();
             client.DeleteEventComplete += ocCLient_DeleteEventComplete;
             client.DeleteEvent(_url);
         }
@@ -181,10 +185,9 @@ namespace OwnCloud.View.Page
         }
 
 
-        private OcCalendarClient LoadOcCalendarClient()
+        private async Task<OcCalendarClient> LoadOcCalendarClient()
         {
-            if(Account.IsEncrypted)
-                Account.RestoreCredentials();
+            await App.AccountService.RestoreCredentials(Account);
 
             return new OcCalendarClient(Account.GetUri().AbsoluteUri,
                                         new Net.OwncloudCredentials
@@ -215,16 +218,16 @@ namespace OwnCloud.View.Page
 
         #region Page Events
 
-        private void OnSaveClick(object sender, EventArgs e)
+        private async void OnSaveClick(object sender, EventArgs e)
         {
             if (_url != null)
-                SaveExisting();
+                await SaveExisting();
         }
 
-        private void OnDeleteClick(object sender, EventArgs e)
+        private async void OnDeleteClick(object sender, EventArgs e)
         {
             if(_url != null)
-                DeleteExisting();
+                await DeleteExisting();
         }
 
         private void CbFullDayEventChanged(object sender, RoutedEventArgs e)

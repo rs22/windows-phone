@@ -14,8 +14,6 @@ namespace OwnCloud.View.Controls
     public partial class ProgressOverlayControl : UserControl
     {
         private string _statusText = "";
-        private int _zIndex = 1000;
-        Popup _owner;
         Grid _base;
         PerformanceProgressBar _bar;
         TextBlock _textBlock;

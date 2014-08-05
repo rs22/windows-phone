@@ -10,27 +10,30 @@ using Microsoft.Phone.Controls;
 using Microsoft.Phone.Shell;
 using OwnCloud.Data;
 using OwnCloud.Extensions;
+using OwnCloud.Common.Accounts;
+using OwnCloud.Storage;
 
 namespace OwnCloud
 {
     public partial class MainPage : PhoneApplicationPage
     {
-
         public MainPage()
         {
             InitializeComponent();
             DataContext = App.DataContext;
         }
 
-        private void PageLoaded(object sender, RoutedEventArgs e)
+        private async void PageLoaded(object sender, RoutedEventArgs e)
         {
-            App.DataContext.Refresh(System.Data.Linq.RefreshMode.OverwriteCurrentValues, App.DataContext.Accounts);
+            //App.DataContext.Refresh(System.Data.Linq.RefreshMode.OverwriteCurrentValues, App.DataContext.Accounts);
+
+            
             
             // anybody there who knows why the LINQ binding isn't working as expected?
             AccountsList.ItemsSource = null;
-            AccountsList.ItemsSource = App.DataContext.Accounts;
+            AccountsList.ItemsSource = await App.AccountService.GetAccounts();
 
-            if (App.DataContext.Accounts.Count() == 0)
+            if ((await App.AccountService.GetAccounts()).Count() == 0)
             {
                 //FilesPanoramaItem.Visibility = System.Windows.Visibility.Collapsed;
             }
@@ -97,7 +100,7 @@ namespace OwnCloud
             originMargin = control.Margin;
         }
 
-        private void AccountsList_ManipulationComplete(object sender, System.Windows.Input.ManipulationCompletedEventArgs e)
+        private async void AccountsList_ManipulationComplete(object sender, System.Windows.Input.ManipulationCompletedEventArgs e)
         {
             FrameworkElement control = (FrameworkElement)sender;
             if (control.Opacity > 0)
@@ -112,12 +115,11 @@ namespace OwnCloud
                 if (MessageBox.Show("AccountsPage_Confirm_Delete".Translate(account.ServerDomain), "AccountsPage_Confirm_Delete_Caption".Translate(), MessageBoxButton.OKCancel) == MessageBoxResult.OK)
                 {
                     // delete object from db
-                    App.DataContext.Accounts.DeleteOnSubmit(account);
-                    App.DataContext.SubmitChanges();
+                    await App.AccountService.DeleteAccount(account);
+                    await App.AccountService.SaveAccounts();
                     // "reload"
-                    App.DataContext.Refresh(System.Data.Linq.RefreshMode.OverwriteCurrentValues, App.DataContext.Accounts);
                     AccountsList.ItemsSource = null;
-                    AccountsList.ItemsSource = App.DataContext.Accounts;
+                    AccountsList.ItemsSource = await App.AccountService.GetAccounts();
                 }
                 else
                 {
@@ -150,18 +152,18 @@ namespace OwnCloud
             button.IconUri = new Uri(_locked ? "/Assets/Icons/unlock.png" : "/Assets/Icons/lock.png", UriKind.Relative);
         }
 
-        private void CalendarPinToStart(object sender, RoutedEventArgs e)
+        private async void CalendarPinToStart(object sender, RoutedEventArgs e)
         {
             var accountID = ((sender as FrameworkElement).DataContext as Account).GUID;
 
-            Extensions.TileHelper.AddCalendarToTile(accountID);
+            await Extensions.TileHelper.AddCalendarToTile(accountID);
         }
 
-        private void RemoteFilesPinToStart(object sender, RoutedEventArgs e)
+        private async void RemoteFilesPinToStart(object sender, RoutedEventArgs e)
         {
             var accountID = ((sender as FrameworkElement).DataContext as Account).GUID;
 
-            Extensions.TileHelper.AddOnlineFilesToTile(accountID);
+            await Extensions.TileHelper.AddOnlineFilesToTile(accountID);
         }
 
         private void PanoramaSelectionChanged(object sender, RoutedEventArgs e)
@@ -189,14 +191,14 @@ namespace OwnCloud
             NavigationService.Navigate(new Uri("/View/Page/EditAccount.xaml", UriKind.Relative));
         }
 
-        private void ChooseAccountTap(object sender, EventArgs e)
+        private async void ChooseAccountTap(object sender, EventArgs e)
         {
             // dynamicly create menu list
             var button = sender as ApplicationBarIconButton;
             ApplicationBar.IsMenuEnabled = true;
             ApplicationBar.MenuItems.Clear();
 
-            foreach (var acc in App.DataContext.Accounts)
+            foreach (var acc in await App.AccountService.GetAccounts())
             {
                 var item = new ApplicationBarMenuItem(acc.ServerDomain);
                 ApplicationBar.MenuItems.Add(item);

@@ -8,15 +8,13 @@ using OwnCloud.Net;
 using OwnCloud.Resource.Localization;
 using System.Linq;
 using OwnCloud.Extensions;
+using OwnCloud.Common.Accounts;
 
-namespace OwnCloud.View.Page
-{
-    public partial class CalendarMonthPage : PhoneApplicationPage
-    {
-        
+namespace OwnCloud.View.Page {
+    public partial class CalendarMonthPage : PhoneApplicationPage {
 
-        public CalendarMonthPage()
-        {
+
+        public CalendarMonthPage() {
             InitializeComponent();
 
             // Translate unsupported XAML bindings
@@ -25,10 +23,8 @@ namespace OwnCloud.View.Page
             this.Unloaded += CalendarMonthPage_Unloaded;
         }
 
-        void CalendarMonthPage_Unloaded(object sender, System.Windows.RoutedEventArgs e)
-        {
-            if (_context != null)
-            {
+        void CalendarMonthPage_Unloaded(object sender, System.Windows.RoutedEventArgs e) {
+            if (_context != null) {
                 _context.Dispose();
                 _context = null;
             }
@@ -36,58 +32,46 @@ namespace OwnCloud.View.Page
 
         #region private fields
 
-        private int _userId = 0;
+        private Guid _userId = Guid.Empty;
 
         private OwnCloudDataContext _context;
-        public OwnCloudDataContext Context
-        {
+        public OwnCloudDataContext Context {
             get { return _context ?? (_context = new OwnCloudDataContext()); }
             set { _context = value; }
         }
 
         private Account _account;
-        public Account Account
-        {
-            get
-            {
-                if (_account == null)
-                {
-                    _account = Context.Accounts.Single(o => o.GUID == _userId);
-                    if(_account.IsEncrypted)
-                        _account.RestoreCredentials();
-                }
-                return _account;
-            }
+        public Account Account {
+            get { return _account; }
             set { _account = value; }
         }
 
         private DateTime? _selectedDate;
-        public DateTime SelectedDate
-        {
-            get { return (DateTime) (_selectedDate.HasValue ? _selectedDate.Value : (_selectedDate = DateTime.Now)); }
+        public DateTime SelectedDate {
+            get { return (DateTime)(_selectedDate.HasValue ? _selectedDate.Value : (_selectedDate = DateTime.Now)); }
             set { _selectedDate = value; }
         }
 
 
         #endregion
 
-        protected override void OnNavigatedTo(NavigationEventArgs e)
-        {
+        protected override async void OnNavigatedTo(NavigationEventArgs e) {
             //Get userid in query
-            if (NavigationContext.QueryString.ContainsKey("uid"))
-                _userId = int.Parse(NavigationContext.QueryString["uid"]);
-            else throw new ArgumentNullException("uid",AppResources.Exception_NoUserID);
+            if (NavigationContext.QueryString.ContainsKey("uid")) {
+                _userId = Guid.Parse(NavigationContext.QueryString["uid"]);
+                _account = await App.AccountService.GetAccountByID(_userId);
+                await App.AccountService.RestoreCredentials(_account);
+            } else throw new ArgumentNullException("uid", AppResources.Exception_NoUserID);
 
             CcCalendar.AccountID = _userId;
             CcCalendar.SelectedDate = SelectedDate;
-            
+
             ReloadAppointments();
 
             base.OnNavigatedTo(e);
         }
 
-        private void ReloadAppointments()
-        {
+        private void ReloadAppointments() {
             LockPage();
             SetLoading();
             var sync = new CalendarSync();
@@ -95,8 +79,7 @@ namespace OwnCloud.View.Page
             sync.Sync(Account.GetUri().AbsoluteUri, new Net.OwncloudCredentials { Username = Account.Username, Password = Account.Password }, Account.CalDAVPath);
         }
 
-        void sync_SyncComplete(bool success)
-        {
+        void sync_SyncComplete(bool success) {
             Dispatcher.BeginInvoke(() => { CcCalendar.RefreshAppointments(); UnlockPage(); UnsetLoading(); });
         }
 
@@ -104,51 +87,42 @@ namespace OwnCloud.View.Page
 
         #region Private events
 
-        private void GotoCalendarSettings(object sender, EventArgs e)
-        {
+        private void GotoCalendarSettings(object sender, EventArgs e) {
             NavigationService.Navigate(new Uri("/View/Page/CalendarSelectPage.xaml?uid=" + _userId.ToString(), UriKind.Relative));
         }
 
-        private void CcCalendar_OnDateChanged(object sender, RoutedEventArgs e)
-        {
+        private void CcCalendar_OnDateChanged(object sender, RoutedEventArgs e) {
             TbMonthHeader.Text = CcCalendar.SelectedDate.ToString("MMMM yy");
             SelectedDate = CcCalendar.SelectedDate.Date;
         }
 
-        private void ReloadCalendarEvents(object sender, EventArgs e)
-        {
+        private void ReloadCalendarEvents(object sender, EventArgs e) {
             ReloadAppointments();
         }
 
         #endregion
 
 
-        private void LockPage()
-        {
-            foreach (var button in ApplicationBar.Buttons.OfType<ApplicationBarIconButton>())
-            {
+        private void LockPage() {
+            foreach (var button in ApplicationBar.Buttons.OfType<ApplicationBarIconButton>()) {
                 button.IsEnabled = false;
             }
             IsEnabled = false;
         }
-        private void UnlockPage()
-        {
-            foreach (var button in ApplicationBar.Buttons.OfType<ApplicationBarIconButton>())
-            {
+        private void UnlockPage() {
+            foreach (var button in ApplicationBar.Buttons.OfType<ApplicationBarIconButton>()) {
                 button.IsEnabled = true;
             }
             IsEnabled = true;
         }
-        private void SetLoading()
-        {
+        private void SetLoading() {
             if (SystemTray.ProgressIndicator != null)
                 SystemTray.ProgressIndicator.IsVisible = true;
         }
-        private void UnsetLoading()
-        {
+        private void UnsetLoading() {
             if (SystemTray.ProgressIndicator != null)
                 SystemTray.ProgressIndicator.IsVisible = false;
         }
-        
+
     }
 }
